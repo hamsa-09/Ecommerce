@@ -1,8 +1,10 @@
 package com.example.vertexspace_server.security;
 
 import com.example.vertexspace_server.exception.JwtAuthenticationException;
+import com.example.vertexspace_server.model.UserAccount;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
 import java.security.Key;
@@ -55,5 +57,13 @@ public class JwtUtil {
         } catch (JwtAuthenticationException e) {
             return false;
         }
+    }
+
+    public static UserAccount getCurrentUser() {
+        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if (principal instanceof CustomUserDetails) {
+            return ((CustomUserDetails) principal).getUserAccount();
+        }
+        throw new IllegalStateException("No authenticated user found");
     }
 }

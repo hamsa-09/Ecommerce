@@ -23,12 +23,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Autowired
     private UserDetailsService userDetailsService;
 
-    @Override
-    protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
-        String path = request.getRequestURI();
-        // Skip JWT filter for endpoints permitted in SecurityConfig
-        return path.equals("/api/auth/register") || path.equals("/api/auth/login");
-    }
+//    @Override
+//    protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
+//        // Remove path matching logic. Rely on SecurityConfig for public endpoint access.
+//        return false;
+//    }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
@@ -55,14 +54,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         return;
                     }
                 }
-            } else if (header == null || header.isEmpty()) {
-                // Only handle missing/empty token for authenticated endpoints
-                // If the endpoint is permitAll, SecurityConfig will allow it
-                // If not, respond with 401 Unauthorized
-                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                response.setContentType("application/json");
-                response.getWriter().write("{\"error\":\"Missing or empty Authorization token\"}");
-                return;
+//            } else if (header == null || header.isEmpty()) {
+//                // Only handle missing/empty token for authenticated endpoints
+//                // If the endpoint is permitAll, SecurityConfig will allow it
+//                // If not, respond with 401 Unauthorized
+//                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+//                response.setContentType("application/json");
+//                response.getWriter().write("{\"error\":\"Missing or empty Authorization token\"}");
+//                return;
             }
             chain.doFilter(request, response);
         } catch (Exception ex) {
