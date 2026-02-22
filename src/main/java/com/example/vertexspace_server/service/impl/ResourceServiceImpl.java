@@ -36,7 +36,12 @@ public class ResourceServiceImpl implements ResourceService {
         resource.setType(dto.getType());
         resource.setCapacity(dto.getCapacity());
         resource.setFeatures(dto.getFeatures());
-        resource.setDeskMode(DeskMode.valueOf(dto.getDeskMode()));
+        if(resource.getType().equals("DESK")) {
+            resource.setDeskMode(DeskMode.valueOf(dto.getDeskMode()));
+        }
+        else{
+            resource.setDeskMode(null);
+        }
         if (dto.getDepartmentId() != null) {
             Department dept = departmentRepository.findById(dto.getDepartmentId())
                 .orElseThrow(() -> new IllegalArgumentException("Invalid departmentId"));

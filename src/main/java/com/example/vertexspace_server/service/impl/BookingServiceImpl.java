@@ -63,7 +63,10 @@ public class BookingServiceImpl implements BookingService {
         if (resource == null) {
             throw new ResourceNotFoundException("Resource not found");
         }
-
+        //todo if the  is resource desktype , assigned status should not allow to book
+        if(resource.getType().equalsIgnoreCase("DESK") && resource.getDeskMode().name().equalsIgnoreCase("ASSIGNED") ){
+            throw new InvalidBookingTimeException("Cannot book a desk that is in Assigned mode");
+        }
         Instant now = Instant.now();
 
         if (dto.getStartUtc().isBefore(now)) {
