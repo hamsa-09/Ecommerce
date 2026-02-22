@@ -76,7 +76,8 @@ public class ResourceServiceImpl implements ResourceService {
                 throw new AccessDeniedException("Not permitted to create resource in this department");
             }
             // Department Admin cannot create resources of type DESK with mode HOT_DESK
-            if (resource.getType().equals("DESK") && resource.getDeskMode() == DeskMode.HOT_DESK) {
+            System.out.println("Resource type: " + resource.getType() + ", Desk mode: " + resource.getDeskMode().name());
+            if (resource.getType().equals("DESK") && resource.getDeskMode().name().equalsIgnoreCase(DeskMode.HOT_DESK.name())) {
                 logger.warn("Department Admin {} cannot create HOT_DESK", user.getUsername());
                 throw new AccessDeniedException("Department Admin cannot create HOT_DESK");
             }
@@ -154,21 +155,26 @@ public class ResourceServiceImpl implements ResourceService {
     }
 
     @Override
-    public List<ResourceResponseDTO> searchResources(String type, Long floorId, Integer capacity, String departmentId) {
+    public List<ResourceResponseDTO> searchResources(
+            String type,
+            Long floorId,
+            Integer capacity,
+            String departmentId,
+            List<String> features) {
+
         Long deptId = null;
         if (departmentId != null && !departmentId.isEmpty()) {
-            try {
-                deptId = Long.parseLong(departmentId);
-            } catch (NumberFormatException e) {
-                logger.warn("Invalid departmentId: {}", departmentId);
-            }
+            deptId = Long.parseLong(departmentId);
         }
+
         List<Resource> resources = resourceRepository.searchResources(
-            type != null && !type.isEmpty() ? type : null,
-            floorId,
-            capacity,
-            deptId
+                type,
+                floorId,
+                capacity,
+                deptId,
+                features
         );
+
         return resources.stream().map(this::toDTO).toList();
     }
 }

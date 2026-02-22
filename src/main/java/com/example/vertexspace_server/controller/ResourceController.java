@@ -14,18 +14,21 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/resources")
 public class ResourceController {
-    @Autowired
-    private ResourceService resourceService;
+    private final ResourceService resourceService;
+
+    public ResourceController(ResourceService resourceService) {
+        this.resourceService = resourceService;
+    }
 
     @PostMapping
     @PreAuthorize("hasAnyRole('SYSTEM_ADMIN', 'DEPARTMENT_ADMIN')")
-    public ResponseEntity<SuccessResponse> createResource(@RequestBody ResourceRequestDTO resourceRequestDTO) {
+    public ResponseEntity<SuccessResponse<String>> createResource(@RequestBody ResourceRequestDTO resourceRequestDTO) {
         return ResponseEntity.status(201).body(new SuccessResponse<>(resourceService.createResource(resourceRequestDTO)));
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('SYSTEM_ADMIN', 'DEPARTMENT_ADMIN')")
-    public ResponseEntity<SuccessResponse> updateResource(@PathVariable Long id, @RequestBody ResourceRequestDTO resourceRequestDTO) {
+    public ResponseEntity<SuccessResponse<String>> updateResource(@PathVariable Long id, @RequestBody ResourceRequestDTO resourceRequestDTO) {
         return ResponseEntity.ok(new SuccessResponse<>(resourceService.updateResource(id, resourceRequestDTO)));
     }
 
@@ -38,17 +41,19 @@ public class ResourceController {
 
     @GetMapping("/{id}")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<ResourceResponseDTO> getResourceById(@PathVariable Long id) {
-        return ResponseEntity.ok(resourceService.getResourceById(id));
+    public ResponseEntity<SuccessResponse<ResourceResponseDTO>> getResourceById(@PathVariable Long id) {
+        return ResponseEntity.ok(new SuccessResponse<>(resourceService.getResourceById(id)));
     }
 
     @GetMapping
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<List<ResourceResponseDTO>> searchResources(
+    public ResponseEntity<SuccessResponse<List<ResourceResponseDTO>>> searchResources(
             @RequestParam(required = false) String type,
             @RequestParam(required = false) Long floorId,
             @RequestParam(required = false) Integer capacity,
-            @RequestParam(required = false) String departmentId) {
-        return ResponseEntity.ok(resourceService.searchResources(type, floorId, capacity, departmentId));
+            @RequestParam(required = false) String departmentId,
+            @RequestParam(required = false) List<String> features)
+    {
+        return ResponseEntity.ok(new SuccessResponse<>(resourceService.searchResources(type, floorId, capacity, departmentId, features)));
     }
 }

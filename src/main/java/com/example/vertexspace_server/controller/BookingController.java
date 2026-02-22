@@ -2,6 +2,7 @@ package com.example.vertexspace_server.controller;
 
 import com.example.vertexspace_server.dto.BookingRequestDTO;
 import com.example.vertexspace_server.dto.BookingResponseDTO;
+import com.example.vertexspace_server.dto.SuccessResponse;
 import com.example.vertexspace_server.model.Booking;
 import com.example.vertexspace_server.service.BookingService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,42 +15,50 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/bookings")
 public class BookingController {
-    @Autowired
-    private BookingService bookingService;
+
+    private final BookingService bookingService;
+
+    public BookingController(BookingService bookingService) {
+        this.bookingService = bookingService;
+    }
 
     @PostMapping
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<BookingResponseDTO> createBooking(@RequestBody BookingRequestDTO bookingRequestDTO) {
-        return ResponseEntity.ok(bookingService.createBooking(bookingRequestDTO));
+    public ResponseEntity<SuccessResponse<BookingResponseDTO>> createBooking(@RequestBody BookingRequestDTO bookingRequestDTO) {
+        return ResponseEntity.ok(new SuccessResponse<>(bookingService.createBooking(bookingRequestDTO)));
     }
 
     @PatchMapping("/{id}/cancel")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<Void> cancelBooking(@PathVariable Long id) {
-        bookingService.cancelBooking(id);
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<SuccessResponse<String>> cancelBooking(@PathVariable Long id) {
+        return ResponseEntity.ok(new SuccessResponse<>(bookingService.cancelBooking(id)));
     }
 
     @GetMapping("/user")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<List<BookingResponseDTO>> listBookingsByUser() {
-        return ResponseEntity.ok(bookingService.listBookingsByUser());
+    public ResponseEntity<SuccessResponse<List<BookingResponseDTO>>> listBookingsByUser() {
+        return ResponseEntity.ok(new SuccessResponse<>(bookingService.listBookingsByUser()));
     }
 
     @GetMapping("/resource/{resourceId}")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<List<BookingResponseDTO>> listBookingsByResource(
+    public ResponseEntity< SuccessResponse<List<BookingResponseDTO>>> listBookingsByResource(
             @PathVariable Long resourceId,
             @RequestParam String startUtc,
             @RequestParam String endUtc) {
-        return ResponseEntity.ok(bookingService.listBookingsByResource(resourceId, startUtc, endUtc));
+        return ResponseEntity.ok(new SuccessResponse<>(bookingService.listBookingsByResource(resourceId, startUtc, endUtc)));
     }
 
     @GetMapping("/range")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<List<BookingResponseDTO>> listBookingsByDateRange(
+    public ResponseEntity<SuccessResponse<List<BookingResponseDTO>>> listBookingsByDateRange(
             @RequestParam String startUtc,
             @RequestParam String endUtc) {
-        return ResponseEntity.ok(bookingService.listBookingsByDateRange(startUtc, endUtc));
+        return ResponseEntity.ok(new SuccessResponse<>(bookingService.listBookingsByDateRange(startUtc, endUtc)));
+    }
+    @PatchMapping("/{id}/cancel-series")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<SuccessResponse<String>> cancelSeries(@PathVariable Long id) {
+        return ResponseEntity.ok(new SuccessResponse<>(bookingService.cancelSeries(id)));
     }
 }

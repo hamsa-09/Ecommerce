@@ -9,5 +9,5 @@ public interface ResourceService {
     String updateResource(Long id, ResourceRequestDTO resourceRequestDTO);
     void deleteResource(Long id);
     ResourceResponseDTO getResourceById(Long id);
-    List<ResourceResponseDTO> searchResources(String type, Long floorId, Integer capacity, String departmentId);
+    List<ResourceResponseDTO> searchResources(String type, Long floorId, Integer capacity, String departmentId,List<String> features);
 }

@@ -10,7 +10,7 @@ public class RegisterRequest {
     private String username;
 
     @NotBlank
-    @Size(min = 8, max = 100)
+    @Size(min = 8, max = 15)
     private String password;
 
     @NotBlank
