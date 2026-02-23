@@ -1,0 +1,72 @@
+todo:
+* import remove
+code push to office lap
+move role to enum and 
+fix features
+flyway-latest postgre version not supported for latest version/liquebase- xml based appraoh so i directly went with sql approach
+streams-learn
+instant-learn
+autowired: learn types
+scheduler : cron , fixed rate ... learn
+learn about indexes ,
+learn about enable async and event listener
+db locks - pessimistic write etc... , transactional 
+autowired- move to contructor based injection
+projection- for join queries learn
+normalise the table for resourcegrp id
+streams:learn
+
+------------------------------------------------------------
+Best slot :  Full Mental Model
+
+For each 15-min start:
+
+Compute slot end
+
+Add buffer
+
+Compare with all confirmed bookings
+
+If no overlap → valid slot
+
+Stop after 5 results
+----------------------------------------------------------------
+For Recommendation:  instead of object arrays we can use projection 
+
+--------------------------------------------------------------------
+edge cases: 
+1.same booked user should not be allowed in waitlist
+2.Add logging to missing
+3. remove unnessary comments
+4. user who is not offered should not be able to accpet
+
+------------------------------------------------------------------------------
+
+"$2a$10$ln/UwjJaxRukCpDs9bm2AuISD6wFWKwpr8AJTxxpF1iPY6W9LflE2"
+
+GlobalExceptionHandler works for exceptions thrown inside controller methods, but Spring Security handles authentication and authorization errors (401/403) at the filter level—before the request reaches your controllers. That’s why:
+GlobalExceptionHandler cannot catch these errors, as they never reach the controller layer.
+CustomAuthenticationEntryPoint and CustomAccessDeniedHandler are needed to handle 401/403 errors globally at the filter level, ensuring a JSON error response for unauthenticated/forbidden access.
+---------------------------------------------------------------------------
+
+
+system admin:
+eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJzeXNhZG1pbiIsInJvbGVzIjpbIlNZU1RFTV9BRE1JTiJdLCJwZXJtaXNzaW9ucyI6e30sImlhdCI6MTc3MTc4NDM1NywiZXhwIjoxNzcxNzg3OTU3fQ.iWYUL6V_Qj2JEp-RSQnY4WWmi1Yplspny0A170sae2zmE5VkCqSISreD75F8EVa8
+
+
+dept admin:
+eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJkZXB0YWRtaW4iLCJyb2xlcyI6WyJERVBBUlRNRU5UX0FETUlOIl0sInBlcm1pc3Npb25zIjp7fSwiaWF0IjoxNzcxNzg0Mzg1LCJleHAiOjE3NzE3ODc5ODV9.vW23C96Y-_BF_gvSCflgSgmRqJim1XpF0XMwsr_Cx6IbilWOcD1smm8XOSvFGEf4
+
+user:
+eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJ1c2VyMSIsInJvbGVzIjpbIlVTRVIiXSwicGVybWlzc2lvbnMiOnt9LCJpYXQiOjE3NzE3ODQ0MjAsImV4cCI6MTc3MTc4ODAyMH0.4qmC50Srin_rWJKccnldOlggW9A4AyuAc3EkwIKqQ82sMrScBxIItA9RZu53ynUS
+
+------------------------------------------------------------------------------
+User calls cancelBooking()
+    ↓
+Booking marked CANCELLED
+    ↓
+DTO returned immediately
+    ↓
+Async listener runs in background
+    ↓
+createOfferForWaitlist() called

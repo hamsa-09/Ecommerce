@@ -1,0 +1,74 @@
+Prevoius feedback : exception handling for specific, status codes, depth of technical understanding,secure api 
+
+------------------------------------------------------------------
+Flow 1:
+
+Authentication:
+      3 endpoints: login,register, logout
+      3 roles for user: user, system admin, dept admin
+      security configuration is handled by security config , password encoder, filter chain etc...
+      after login-> jwt token will be generated -> each req has jwt oncePerRequestFilter with jwt utility methods, valid token will be authenticated
+      to handled exception: which are not handled by global exception, implemented 2 classes for the access denied (custom access denied and entry point) which are called from security config filter chain
+       
+AuthController,AuthService ,UserAccountRepository - to handle login registration and login, logout
+userdetailsservice - used by login to load by username and authenticate with respect to authorisation which returns the token
+
+Also implemented global exception handler and logging
+
+Also implemented swagger
+
+Edge Cases:Invalid token, empty token , invalid credentails
+
+new leanrt: flyway, liquebase
+---------------------------------------------------------------------------
+Flow 2:
+Resource creation:
+ResouceController, Resource Serivce , ResouceRepo : 
+endpoint:
+
+create resource:
+description:using createresource endpoint we can create resource with resource name , type,department,floor,capacity,features,deskMode 
+can be accessed : Dept_Admin(cannot creae resoures with hot_desk mode and outside thier dept), System_Admin(access to all)
+
+edgecases: 
+3 roles tested to check auth , bad request tested, hot assigned could not be created by dept admin while in desk mode
+
+
+update resource:
+description: can be used to update the resource in the db 
+can be accessed : Dept_Admin(can update everything except deskmode wihin their dept) ,System_Admin(can do everything)
+edgecases: 3 roles tested to check auth , bad request tested, checked dept_admin deskmode updation
+
+delete resouces:
+description: resources can be deleted only by system admin
+edgecases:3 roles tested to check auth , bad request tested,checked with normal system admin
+
+getresources:
+description:can be accessed by any authenticate user irrespective of the role to get the resource data using resource id
+edgecases: Invalid token, empty token , invalid credentials,authenticated user can get the resources by id
+
+search resource:
+description:can be accessed by any authenticate user irrespective of the role to search the resource data using type, feaures,etc...
+edgecases:Invalid token, empty token , invalid credentails, authenticated user  can searcH resources with any combination of tpes ,feature etc ...
+
+new learnt : instant,db indexes
+-----------------------------------------------------------------------------
+Flow 3: Booking
+
+new learnt:Transaction and db lock(pessimistic lock)
+----------------------------------------------------------------------------
+Flow 4: Waitlist
+ new learnt:job scheduling,  event handling 
+----------------------------------------------------------------------------
+Flow 5:Bestslot
+
+-----------------------------------------------------------------------------
+Flow 6:recommendation
+
+------------------------------------------------------------------------------
+Flow 7: deskassignment
+
+------------------------------------------------------------------------------
+Flow 8:recurrence+notification
+
+	 

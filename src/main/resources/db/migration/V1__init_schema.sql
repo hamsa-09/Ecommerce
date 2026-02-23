@@ -163,3 +163,4 @@ INSERT INTO user_account (username, password, role_id, department_id, email) VAL
                                                                                  ('sysadmin', '$2a$10$ln/UwjJaxRukCpDs9bm2AuISD6wFWKwpr8AJTxxpF1iPY6W9LflE2', 1, 4, 'sysadmin@vertexspace.com'),
                                                                                  ('deptadmin', '$2a$10$ln/UwjJaxRukCpDs9bm2AuISD6wFWKwpr8AJTxxpF1iPY6W9LflE2', 2, 1, 'deptadmin@vertexspace.com'),
                                                                                  ('user1', '$2a$10$ln/UwjJaxRukCpDs9bm2AuISD6wFWKwpr8AJTxxpF1iPY6W9LflE2', 3, 1, 'user1@vertexspace.com');
+
