@@ -70,4 +70,13 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
         """)
     List<Object[]> findTopResourcesLast30Days(Long userId,
                                               Instant fromDate);
+    @Query("""
+        SELECT b FROM Booking b
+        WHERE b.status = 'CONFIRMED'
+        AND b.startUtc BETWEEN :start AND :end
+    """)
+    List<Booking> findBookingsStartingBetween(
+            @Param("start") Instant start,
+            @Param("end") Instant end
+    );
 }

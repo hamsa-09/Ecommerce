@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket Test</title>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+</head>
+<body>
+
+<h2>WebSocket Notification Test</h2>
+
+<button onclick="connect()">Connect</button>
+<button onclick="subscribe()">Subscribe</button>
+
+<pre id="output"></pre>
+
+<script>
+
+    let stompClient = null;
+
+    const token = "";
+
+    function log(message) {
+        document.getElementById("output").innerHTML += message + "\n";
+    }
+
+    function connect() {
+
+        const socket = new SockJS("http://localhost:8080/ws");
+        stompClient = Stomp.over(socket);
+
+        stompClient.connect(
+            {
+                Authorization: "Bearer " + token
+            },
+            function (frame) {
+                log("Connected: " + frame);
+            },
+            function (error) {
+                log("Error: " + error);
+            }
+        );
+    }
+
+    function subscribe() {
+
+        stompClient.subscribe("/user/queue/notifications", function (message) {
+            log("Received: " + message.body);
+        });
+
+        log("Subscribed to /user/queue/notifications");
+    }
+
+</script>
+
+</body>
+</html>

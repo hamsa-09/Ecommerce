@@ -5,6 +5,7 @@ import com.example.vertexspace_server.dto.WaitlistStatusDTO;
 import com.example.vertexspace_server.exception.ResourceNotFoundException;
 import com.example.vertexspace_server.model.*;
 import com.example.vertexspace_server.repository.*;
+import com.example.vertexspace_server.service.NotificationService;
 import com.example.vertexspace_server.service.WaitlistService;
 import com.example.vertexspace_server.security.JwtUtil;
 
@@ -17,7 +18,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -33,6 +33,8 @@ public class WaitlistServiceImpl implements WaitlistService {
     private final BookingRepository bookingRepo;
     private final ResourceRepository resourceRepo;
 
+    private final NotificationService notificationService;
+
     @PersistenceContext
     private EntityManager entityManager;
 
@@ -40,12 +42,13 @@ public class WaitlistServiceImpl implements WaitlistService {
             WaitlistEntryRepository waitlistEntryRepo,
             WaitlistOfferRepository offerRepo,
             BookingRepository bookingRepo,
-            ResourceRepository resourceRepo
+            ResourceRepository resourceRepo, NotificationService notificationService
     ) {
         this.waitlistEntryRepo = waitlistEntryRepo;
         this.offerRepo = offerRepo;
         this.bookingRepo = bookingRepo;
         this.resourceRepo = resourceRepo;
+        this.notificationService = notificationService;
     }
 
     // =========================================================
@@ -193,7 +196,11 @@ public class WaitlistServiceImpl implements WaitlistService {
         offer.setExpiresAtUtc(
                 Instant.now().plusSeconds(OFFER_WINDOW_MINUTES * 60));
         offer.setProvisionalBooking(savedBooking);
-
+        notificationService.sendNotification(
+                nextUser.getUser(),
+                "A slot is available! You have been offered a booking.",
+                NotificationType.BOOKING_OFFERED
+        );
         offerRepo.save(offer);
     }
 

@@ -70,3 +70,8 @@ DTO returned immediately
 Async listener runs in background
     ↓
 createOfferForWaitlist() called
+-------------------------------------------------------------------------------------
+Questions:
+in app messaging per booking threads,
+there is a single booking per user right? the implementation is to show conflict if another user books,
+ or waitlist and join rite, how chat will be handled here

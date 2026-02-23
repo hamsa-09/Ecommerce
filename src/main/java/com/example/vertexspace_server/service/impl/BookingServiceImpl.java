@@ -6,13 +6,11 @@ import com.example.vertexspace_server.events.BookingCancelledEvent;
 import com.example.vertexspace_server.exception.BookingConflictException;
 import com.example.vertexspace_server.exception.InvalidBookingTimeException;
 import com.example.vertexspace_server.exception.ResourceNotFoundException;
-import com.example.vertexspace_server.model.Booking;
-import com.example.vertexspace_server.model.BookingStatus;
-import com.example.vertexspace_server.model.Resource;
-import com.example.vertexspace_server.model.UserAccount;
+import com.example.vertexspace_server.model.*;
 import com.example.vertexspace_server.repository.BookingRepository;
 import com.example.vertexspace_server.repository.ResourceRepository;
 import com.example.vertexspace_server.service.BookingService;
+import com.example.vertexspace_server.service.NotificationService;
 import com.example.vertexspace_server.service.WaitlistService;
 import com.example.vertexspace_server.security.JwtUtil;
 
@@ -38,16 +36,17 @@ public class BookingServiceImpl implements BookingService {
     private final ResourceRepository resourceRepository;
     private final WaitlistService waitlistService;
     private final ApplicationEventPublisher applicationEventPublisher;
-
+    private final NotificationService notificationService;
     public BookingServiceImpl(
             BookingRepository bookingRepository,
             ResourceRepository resourceRepository,
-            WaitlistService waitlistService, ApplicationEventPublisher applicationEventPublisher
+            WaitlistService waitlistService, ApplicationEventPublisher applicationEventPublisher, NotificationService notificationService
     ) {
         this.bookingRepository = bookingRepository;
         this.resourceRepository = resourceRepository;
         this.waitlistService = waitlistService;
         this.applicationEventPublisher = applicationEventPublisher;
+        this.notificationService = notificationService;
     }
 
     // =========================================================
@@ -126,18 +125,26 @@ public class BookingServiceImpl implements BookingService {
             booking.setEndUtc(end);
             booking.setStatus(BookingStatus.CONFIRMED);
             booking.setRecurrenceGroupId(recurrenceGroupId);
-
             bookingsToSave.add(booking);
         }
 
         //  Single optimized DB call
         List<Booking> savedBookings = bookingRepository.saveAll(bookingsToSave);
-
+        for(Booking b : savedBookings){
+            logger.info("Created booking {} for resource {} from {} to {}",
+                    b.getId(), b.getResource().getId(), b.getStartUtc(), b.getEndUtc());
+            notificationService.sendNotification(
+                    user,
+                    "Your booking is confirmed for " + b.getStartUtc(),
+                    NotificationType.BOOKING_CONFIRMED
+            );
+        }
         logger.info("Booking created with recurrence group {}", recurrenceGroupId);
         BookingResponseDTO response = toDTO(savedBookings.get(0));
         response.setRecurring(recurring);
         response.setRecurrenceType(recurrenceType);
         response.setRecurrenceCount(occurrences);
+
         return response; // return first occurrence
     }
 
@@ -179,7 +186,11 @@ public class BookingServiceImpl implements BookingService {
                         saved.getEndUtc()
                 )
         );
-
+        notificationService.sendNotification(
+                booking.getUser(),
+                "Your booking has been cancelled.",
+                NotificationType.BOOKING_CANCELLED
+        );
         // Return immediately
         return "Booking Cancelled Successfully";
     }
