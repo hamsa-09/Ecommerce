@@ -1,0 +1,114 @@
+Table role {
+  id int [pk, increment]
+  name varchar(50) [unique, not null]
+}
+
+Table department {
+  id int [pk, increment]
+  name varchar(100) [not null]
+}
+
+Table building {
+  id int [pk, increment]
+  name varchar(100) [not null]
+}
+
+Table floor {
+  id int [pk, increment]
+  building_id int [not null]
+  name varchar(100) [not null]
+}
+
+Table resource {
+  id int [pk, increment]
+  name varchar(100) [not null]
+  type varchar(20) [not null]
+  department_id int
+  floor_id int [not null]
+  capacity int [not null]
+  desk_mode varchar(20) [not null]
+}
+
+Table resource_features {
+  resource_id int [not null]
+  feature varchar(255) [not null]
+}
+
+Table user_account {
+  id int [pk, increment]
+  username varchar(100) [unique, not null]
+  password varchar(255) [not null]
+  role_id int
+  department_id int
+  email varchar(100) [unique, not null]
+}
+
+Table booking {
+  id int [pk, increment]
+  resource_id int [not null]
+  user_id int [not null]
+  start_utc timestamp [not null]
+  end_utc timestamp [not null]
+  status varchar(30) [not null]
+  recurrence_group_id uuid
+}
+
+Table waitlist_entry {
+  id int [pk, increment]
+  resource_id int [not null]
+  start_utc timestamp [not null]
+  end_utc timestamp [not null]
+  user_id int [not null]
+  created_at_utc timestamp [not null]
+}
+
+Table waitlist_offer {
+  id int [pk, increment]
+  waitlist_entry_id int [not null]
+  status varchar(30) [not null]
+  offered_at_utc timestamp [not null]
+  expires_at_utc timestamp [not null]
+  provisional_booking_id int [unique]
+}
+
+Table desk_assignment {
+  id int [pk, increment]
+  resource_id int
+  user_id int
+  start_utc timestamp [not null]
+  end_utc timestamp
+}
+
+Table notification {
+  id int [pk, increment]
+  user_id int
+  message varchar [not null]
+  type varchar
+  read_status boolean [default: false]
+  created_at timestamp
+}
+
+
+Ref: floor.building_id > building.id
+
+Ref: resource.department_id > department.id
+Ref: resource.floor_id > floor.id
+
+Ref: resource_features.resource_id > resource.id
+
+Ref: user_account.role_id > role.id
+Ref: user_account.department_id > department.id
+
+Ref: booking.resource_id > resource.id
+Ref: booking.user_id > user_account.id
+
+Ref: waitlist_entry.resource_id > resource.id
+Ref: waitlist_entry.user_id > user_account.id
+
+Ref: waitlist_offer.waitlist_entry_id > waitlist_entry.id
+Ref: waitlist_offer.provisional_booking_id > booking.id
+
+Ref: desk_assignment.resource_id > resource.id
+Ref: desk_assignment.user_id > user_account.id
+
+Ref: notification.user_id > user_account.id
