@@ -3,9 +3,7 @@ package com.example.vertexspace_server.controller;
 import com.example.vertexspace_server.dto.ResourceRequestDTO;
 import com.example.vertexspace_server.dto.ResourceResponseDTO;
 import com.example.vertexspace_server.dto.SuccessResponse;
-import com.example.vertexspace_server.model.Resource;
 import com.example.vertexspace_server.service.ResourceService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -21,13 +19,13 @@ public class ResourceController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('SYSTEM_ADMIN', 'DEPARTMENT_ADMIN')")
+    @PreAuthorize("hasRole('SYSTEM_ADMIN')")
     public ResponseEntity<SuccessResponse<String>> createResource(@RequestBody ResourceRequestDTO resourceRequestDTO) {
         return ResponseEntity.status(201).body(new SuccessResponse<>(resourceService.createResource(resourceRequestDTO)));
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('SYSTEM_ADMIN', 'DEPARTMENT_ADMIN')")
+    @PreAuthorize("hasRole('SYSTEM_ADMIN')")
     public ResponseEntity<SuccessResponse<String>> updateResource(@PathVariable Long id, @RequestBody ResourceRequestDTO resourceRequestDTO) {
         return ResponseEntity.ok(new SuccessResponse<>(resourceService.updateResource(id, resourceRequestDTO)));
     }
@@ -49,11 +47,11 @@ public class ResourceController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<SuccessResponse<List<ResourceResponseDTO>>> searchResources(
             @RequestParam(required = false) String type,
-            @RequestParam(required = false) Long floorId,
+            @RequestParam(required = false) String floorName,
             @RequestParam(required = false) Integer capacity,
-            @RequestParam(required = false) String departmentId,
+            @RequestParam(required = false) String departmentName,
             @RequestParam(required = false) List<String> features)
     {
-        return ResponseEntity.ok(new SuccessResponse<>(resourceService.searchResources(type, floorId, capacity, departmentId, features)));
+        return ResponseEntity.ok(new SuccessResponse<>(resourceService.searchResources(type, floorName, capacity, departmentName, features)));
     }
 }

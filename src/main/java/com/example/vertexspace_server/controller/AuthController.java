@@ -37,4 +37,10 @@ public class AuthController {
     public ResponseEntity<?> logout() {
         return authService.logout();
     }
+
+    @GetMapping("/department")
+    public ResponseEntity<?> getDepartment() {
+        return authService.getDepartment();
+    }
+
 }

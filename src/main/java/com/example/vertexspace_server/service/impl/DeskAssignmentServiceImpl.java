@@ -46,6 +46,11 @@ public class DeskAssignmentServiceImpl implements DeskAssignmentService {
         Resource resource = resourceRepository.findById(dto.getResourceId())
                 .orElseThrow(() -> new ResourceNotFoundException("Desk not found"));
 
+        // Only desks can be assigned
+        if (!"DESK".equalsIgnoreCase(resource.getType())) {
+            throw new InvalidDeskModeException("Resource is not a desk");
+        }
+
         UserAccount targetUser = userAccountRepository.findById(dto.getUserId())
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
@@ -54,7 +59,7 @@ public class DeskAssignmentServiceImpl implements DeskAssignmentService {
             throw new InvalidDeskModeException("Desk is not in ASSIGNED mode");
         }
 
-        //Rule 2: Department Admin can assign only within department
+        // Rule 2: Department Admin can assign only within department
         String roleName = currentUser.getRole().getName();
 
         if ("DEPARTMENT_ADMIN".equalsIgnoreCase(roleName)) {

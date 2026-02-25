@@ -142,9 +142,15 @@ INSERT INTO department (name) VALUES
                                   ('ADMIN');
 
 INSERT INTO building (name) VALUES ('Main Office');
+INSERT INTO building (name) VALUES ('Sub Office');
+INSERT INTO building (name) VALUES ('Tertiary Office');
 
 INSERT INTO floor (building_id, name)
 VALUES (1, 'First Floor');
+INSERT INTO floor (building_id, name)
+VALUES (1, 'Second Floor');
+INSERT INTO floor (building_id, name)
+VALUES (1, 'Third Floor');
 
 INSERT INTO resource (name, type, department_id, floor_id, capacity, desk_mode) VALUES
                                                                                     ('Room 101', 'ROOM', 1, 1, 10, 'HOT_DESK'),

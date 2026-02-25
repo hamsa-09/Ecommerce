@@ -11,7 +11,7 @@ import java.util.UUID;
 
 public interface BookingRepository extends JpaRepository<Booking, Long> {
 
-    // 🔒 Conflict detection with buffer logic
+    // Conflict detection with buffer logic
     @Query("""
         SELECT b FROM Booking b
         WHERE b.resource.id = :resourceId

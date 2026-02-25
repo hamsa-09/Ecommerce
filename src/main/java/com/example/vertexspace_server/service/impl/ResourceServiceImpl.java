@@ -18,7 +18,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
+
 import java.util.List;
+
 
 @Service
 public class ResourceServiceImpl implements ResourceService {
@@ -36,20 +39,27 @@ public class ResourceServiceImpl implements ResourceService {
         resource.setType(dto.getType());
         resource.setCapacity(dto.getCapacity());
         resource.setFeatures(dto.getFeatures());
-        if(resource.getType().equals("DESK")) {
+        if ("DESK".equalsIgnoreCase(resource.getType())) {
+            if (dto.getDeskMode() == null) {
+                throw new IllegalArgumentException("deskMode is required for DESK resources");
+            }
             resource.setDeskMode(DeskMode.valueOf(dto.getDeskMode()));
+        } else {
+            // DB column is NOT NULL; use a harmless default for non-desk resources
+            resource.setDeskMode(DeskMode.HOT_DESK);
         }
-        else{
-            resource.setDeskMode(null);
-        }
-        if (dto.getDepartmentId() != null) {
-            Department dept = departmentRepository.findById(dto.getDepartmentId())
-                .orElseThrow(() -> new IllegalArgumentException("Invalid departmentId"));
+        if (StringUtils.hasText(dto.getDepartmentName())) {
+            Department dept = departmentRepository.findByNameIgnoreCase(dto.getDepartmentName());
+            if (dept == null) {
+                throw new IllegalArgumentException("Invalid department name");
+            }
             resource.setDepartment(dept);
         }
-        if (dto.getFloorId() != null) {
-            Floor floor = floorRepository.findById(dto.getFloorId())
-                .orElseThrow(() -> new IllegalArgumentException("Invalid floorId"));
+        if (StringUtils.hasText(dto.getFloorName())) {
+            Floor floor = floorRepository.findByNameIgnoreCase(dto.getFloorName());
+            if (floor == null) {
+                throw new IllegalArgumentException("Invalid floor name");
+            }
             resource.setFloor(floor);
         }
         return resource;
@@ -62,9 +72,9 @@ public class ResourceServiceImpl implements ResourceService {
         dto.setType(resource.getType());
         dto.setCapacity(resource.getCapacity());
         dto.setFeatures(resource.getFeatures());
-        dto.setDeskMode(resource.getDeskMode().name());
-        dto.setDepartmentId(resource.getDepartment() != null ? resource.getDepartment().getId() : null);
-        dto.setFloorId(resource.getFloor() != null ? resource.getFloor().getId() : null);
+        dto.setDeskMode(resource.getDeskMode() != null ? resource.getDeskMode().name() : null);
+        dto.setDepartmentName(resource.getDepartment() != null ? resource.getDepartment().getName() : null);
+        dto.setFloorName(resource.getFloor() != null ? resource.getFloor().getName() : null);
         return dto;
     }
 
@@ -72,23 +82,8 @@ public class ResourceServiceImpl implements ResourceService {
     public String createResource(ResourceRequestDTO resourceRequestDTO) {
         UserAccount user = JwtUtil.getCurrentUser();
         Resource resource = toEntity(resourceRequestDTO);
-        // Only System Admin can set departmentId/type arbitrarily
-        if (!user.getRole().getName().equals("SYSTEM_ADMIN")) {
-            // Department Admin can only create resources in their own department
-            if (!user.getRole().getName().equals("DEPARTMENT_ADMIN") ||
-                !resource.getDepartment().getId().equals(user.getDepartment().getId())) {
-                logger.warn("User {} not permitted to create resource in department {}", user.getUsername(), resource.getDepartment().getId());
-                throw new AccessDeniedException("Not permitted to create resource in this department");
-            }
-            // Department Admin cannot create resources of type DESK with mode HOT_DESK
-            System.out.println("Resource type: " + resource.getType() + ", Desk mode: " + resource.getDeskMode().name());
-            if (resource.getType().equals("DESK") && resource.getDeskMode().name().equalsIgnoreCase(DeskMode.HOT_DESK.name())) {
-                logger.warn("Department Admin {} cannot create HOT_DESK", user.getUsername());
-                throw new AccessDeniedException("Department Admin cannot create HOT_DESK");
-            }
-        }
         logger.info("User {} creating resource: {}", user.getUsername(), resource);
-        Resource saved = resourceRepository.save(resource);
+        resourceRepository.save(resource);
         return "Resource created successfully";
     }
 
@@ -97,54 +92,37 @@ public class ResourceServiceImpl implements ResourceService {
         UserAccount user = JwtUtil.getCurrentUser();
         Resource existing = resourceRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Resource not found: " + id));
-        // System Admin can update all fields
-        if (user.getRole().getName().equals("SYSTEM_ADMIN")) {
-            existing.setName(resourceRequestDTO.getName());
-            existing.setType(resourceRequestDTO.getType());
-            if (resourceRequestDTO.getDepartmentId() != null) {
-                Department dept = departmentRepository.findById(resourceRequestDTO.getDepartmentId())
-                    .orElseThrow(() -> new IllegalArgumentException("Invalid departmentId"));
-                existing.setDepartment(dept);
+        existing.setName(resourceRequestDTO.getName());
+        existing.setType(resourceRequestDTO.getType());
+        if (StringUtils.hasText(resourceRequestDTO.getDepartmentName())) {
+            Department dept = departmentRepository.findByNameIgnoreCase(resourceRequestDTO.getDepartmentName());
+            if (dept == null) {
+                throw new IllegalArgumentException("Invalid department name");
             }
-            existing.setCapacity(resourceRequestDTO.getCapacity());
-            existing.setFeatures(resourceRequestDTO.getFeatures());
-            if (existing.getType().equals("DESK")) {
-                existing.setDeskMode(DeskMode.valueOf(resourceRequestDTO.getDeskMode()));
-            }
-            resourceRepository.save(existing);
-            logger.info("System Admin {} updated resource {}", user.getUsername(), id);
-            return " Resource Updated Successfully";
+            existing.setDepartment(dept);
         }
-        // Department Admin: can only update resources in their department
-        if (user.getRole().getName().equals("DEPARTMENT_ADMIN") &&
-            existing.getDepartment().getId().equals(user.getDepartment().getId())) {
-            // Cannot change type or department
-            if (!existing.getType().equals(resourceRequestDTO.getType()) ||
-                !existing.getDepartment().getId().equals(resourceRequestDTO.getDepartmentId())) {
-                logger.warn("Department Admin {} cannot change type/department for resource {}", user.getUsername(), id);
-                throw new AccessDeniedException("Unauthorised to change type or department");
+        if (StringUtils.hasText(resourceRequestDTO.getFloorName())) {
+            Floor floor = floorRepository.findByNameIgnoreCase(resourceRequestDTO.getFloorName());
+            if (floor == null) {
+                throw new IllegalArgumentException("Invalid floor name");
             }
-            // For DESK, cannot change desk mode
-            System.out.println("Existing desk mode: " + existing.getDeskMode().name()+ ", Requested desk mode: " + resourceRequestDTO.getDeskMode());
-            if (existing.getType().equals("DESK") &&
-                !existing.getDeskMode().name().equalsIgnoreCase(resourceRequestDTO.getDeskMode())) {
-                logger.warn("Department Admin {} cannot change desk mode for resource {}", user.getUsername(), id);
-                throw new AccessDeniedException("Unauthorised to change desk mode");
-            }
-            // Can update other fields
-            existing.setName(resourceRequestDTO.getName());
-            existing.setCapacity(resourceRequestDTO.getCapacity());
-            existing.setFeatures(resourceRequestDTO.getFeatures());
-            resourceRepository.save(existing);
-            logger.info("Department Admin {} updated resource {}", user.getUsername(), id);
-            return "Resource Updated Successfully";
+            existing.setFloor(floor);
         }
-        logger.warn("User {} not permitted to update resource {}", user.getUsername(), id);
-        throw new AccessDeniedException("Not permitted to update this resource");
+        existing.setCapacity(resourceRequestDTO.getCapacity());
+        existing.setFeatures(resourceRequestDTO.getFeatures());
+        existing.setDeskMode(DeskMode.valueOf(resourceRequestDTO.getDeskMode()));
+
+        resourceRepository.save(existing);
+        logger.info("System Admin {} updated resource {}", user.getUsername(), id);
+        return " Resource Updated Successfully";
     }
 
     @Override
     public void deleteResource(Long id) {
+        UserAccount user = JwtUtil.getCurrentUser();
+        if (!"SYSTEM_ADMIN".equals(user.getRole().getName())) {
+            throw new AccessDeniedException("Only system admin can manage resources");
+        }
         if (!resourceRepository.existsById(id)) {
             throw new ResourceNotFoundException("Resource not found for deletion: " + id);
         }
@@ -162,14 +140,27 @@ public class ResourceServiceImpl implements ResourceService {
     @Override
     public List<ResourceResponseDTO> searchResources(
             String type,
-            Long floorId,
+            String floorName,
             Integer capacity,
-            String departmentId,
+            String departmentName,
             List<String> features) {
 
         Long deptId = null;
-        if (departmentId != null && !departmentId.isEmpty()) {
-            deptId = Long.parseLong(departmentId);
+        if (StringUtils.hasText(departmentName)) {
+            Department department = departmentRepository.findByNameIgnoreCase(departmentName);
+            if (department == null) {
+                throw new ResourceNotFoundException("Department not found: " + departmentName);
+            }
+            deptId = department.getId();
+        }
+
+        Long floorId = null;
+        if (StringUtils.hasText(floorName)) {
+            Floor floor = floorRepository.findByNameIgnoreCase(floorName);
+            if (floor == null) {
+                throw new ResourceNotFoundException("Floor not found: " + floorName);
+            }
+            floorId = floor.getId();
         }
 
         List<Resource> resources = resourceRepository.searchResources(

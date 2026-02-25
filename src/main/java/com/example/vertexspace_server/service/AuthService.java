@@ -10,4 +10,5 @@ public interface AuthService {
     ResponseEntity<?> register(RegisterRequest request);
     ResponseEntity<SuccessResponse<JwtResponse>> login(LoginRequest request);
     ResponseEntity<SuccessResponse<String>> logout();
+    ResponseEntity<?> getDepartment();
 }

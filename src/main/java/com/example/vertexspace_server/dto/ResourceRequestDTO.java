@@ -5,8 +5,8 @@ import java.util.Set;
 public class ResourceRequestDTO {
     private String name;
     private String type;
-    private Long departmentId;
-    private Long floorId;
+    private String departmentName;
+    private String floorName;
     private Integer capacity;
     private Set<String> features;
     private String deskMode; // Only for DESK
@@ -16,10 +16,10 @@ public class ResourceRequestDTO {
     public void setName(String name) { this.name = name; }
     public String getType() { return type; }
     public void setType(String type) { this.type = type; }
-    public Long getDepartmentId() { return departmentId; }
-    public void setDepartmentId(Long departmentId) { this.departmentId = departmentId; }
-    public Long getFloorId() { return floorId; }
-    public void setFloorId(Long floorId) { this.floorId = floorId; }
+    public String getDepartmentName() { return departmentName; }
+    public void setDepartmentName(String departmentName) { this.departmentName = departmentName; }
+    public String getFloorName() { return floorName; }
+    public void setFloorName(String floorName) { this.floorName = floorName; }
     public Integer getCapacity() { return capacity; }
     public void setCapacity(Integer capacity) { this.capacity = capacity; }
     public Set<String> getFeatures() { return features; }

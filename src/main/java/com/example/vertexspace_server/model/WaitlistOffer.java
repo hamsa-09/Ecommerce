@@ -30,7 +30,7 @@ public class WaitlistOffer {
     @Column(nullable = false)
     private Instant expiresAtUtc;
 
-    // 🔥 Provisional booking link
+    // Provisional booking link
     @OneToOne
     @JoinColumn(name = "provisional_booking_id")
     private Booking provisionalBooking;

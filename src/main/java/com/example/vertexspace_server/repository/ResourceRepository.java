@@ -11,7 +11,7 @@ import java.util.List;
 
 public interface ResourceRepository extends JpaRepository<Resource, Long> {
 
-    // 🔒 Pessimistic lock for booking creation
+    // Pessimistic lock for booking creation
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT r FROM Resource r WHERE r.id = :id")
     Resource findByIdForUpdate(@Param("id") Long id);

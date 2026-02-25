@@ -89,4 +89,9 @@ public class AuthServiceImpl implements AuthService {
     public ResponseEntity<SuccessResponse<String>> logout() {
         return ResponseEntity.ok(new SuccessResponse<>("Logged out successfully"));
     }
+
+    @Override
+    public ResponseEntity<SuccessResponse<List<String>>> getDepartment() {
+        return ResponseEntity.ok(new SuccessResponse<>(departmentRepository.findAll().stream().map(Department::getName).toList()));
+    }
 }
