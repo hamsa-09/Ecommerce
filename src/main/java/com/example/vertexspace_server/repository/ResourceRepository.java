@@ -34,4 +34,19 @@ public interface ResourceRepository extends JpaRepository<Resource, Long> {
     );
 
     Resource findByNameIgnoreCase(String name);
+
+    @Query("""
+        SELECT r FROM Resource r
+        WHERE LOWER(r.type) = 'desk'
+        AND r.deskMode = 'ASSIGNED'
+    """)
+    List<Resource> findAssignedDesks();
+
+    @Query("""
+        SELECT r FROM Resource r
+        WHERE LOWER(r.type) = 'desk'
+        AND r.deskMode = 'ASSIGNED'
+        AND r.department.id = :deptId
+    """)
+    List<Resource> findAssignedDesksByDepartment(@Param("deptId") Long deptId);
 }

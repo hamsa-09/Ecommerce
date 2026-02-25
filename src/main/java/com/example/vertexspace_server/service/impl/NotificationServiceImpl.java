@@ -1,13 +1,17 @@
 package com.example.vertexspace_server.service.impl;
 
+import com.example.vertexspace_server.dto.NotificationDTO;
 import com.example.vertexspace_server.model.Notification;
 import com.example.vertexspace_server.model.NotificationType;
 import com.example.vertexspace_server.model.UserAccount;
 import com.example.vertexspace_server.repository.NotificationRepository;
+import com.example.vertexspace_server.security.JwtUtil;
 import com.example.vertexspace_server.service.NotificationService;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.messaging.simp.user.SimpUserRegistry;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 @Service
 public class NotificationServiceImpl implements NotificationService {
@@ -25,6 +29,7 @@ public class NotificationServiceImpl implements NotificationService {
         this.messagingTemplate = messagingTemplate;
     }
 
+    @Override
     public void sendNotification(UserAccount user,
                                  String message,
                                  NotificationType type) {
@@ -43,5 +48,24 @@ public class NotificationServiceImpl implements NotificationService {
                 "/queue/notifications",
                 message
         );
+    }
+
+    @Override
+    public List<NotificationDTO> getCurrentUserNotifications() {
+        UserAccount currentUser = JwtUtil.getCurrentUser();
+        return notificationRepository.findByUserIdOrdered(currentUser.getId())
+                .stream()
+                .map(this::toDTO)
+                .toList();
+    }
+
+    private NotificationDTO toDTO(Notification notification) {
+        NotificationDTO dto = new NotificationDTO();
+        dto.setId(notification.getId());
+        dto.setMessage(notification.getMessage());
+        dto.setType(notification.getType() != null ? notification.getType().name() : null);
+        dto.setReadStatus(notification.isReadStatus());
+        dto.setCreatedAt(notification.getCreatedAt());
+        return dto;
     }
 }

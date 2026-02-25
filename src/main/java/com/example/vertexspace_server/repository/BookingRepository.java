@@ -28,9 +28,21 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     @Query("""
         SELECT b FROM Booking b
-        WHERE b.user.department.id = :departmentId
+        WHERE b.resource.department.id = :departmentId
     """)
-    List<Booking> findByUserDepartmentId(@Param("departmentId") Long departmentId);
+    List<Booking> findByResourceDepartmentId(@Param("departmentId") Long departmentId);
+
+    @Query("""
+        SELECT b FROM Booking b
+        WHERE b.resource.department.id = :departmentId
+        AND b.startUtc >= :startUtc
+        AND b.endUtc <= :endUtc
+    """)
+    List<Booking> findByResourceDepartmentAndTimeRange(
+            @Param("departmentId") Long departmentId,
+            @Param("startUtc") Instant startUtc,
+            @Param("endUtc") Instant endUtc
+    );
 
     @Query("""
         SELECT b FROM Booking b
@@ -40,18 +52,6 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     """)
     List<Booking> findByUserIdAndTimeRange(
             @Param("userId") Long userId,
-            @Param("startUtc") Instant startUtc,
-            @Param("endUtc") Instant endUtc
-    );
-
-    @Query("""
-        SELECT b FROM Booking b
-        WHERE b.user.department.id = :departmentId
-        AND b.startUtc >= :startUtc
-        AND b.endUtc <= :endUtc
-    """)
-    List<Booking> findByDepartmentAndTimeRange(
-            @Param("departmentId") Long departmentId,
             @Param("startUtc") Instant startUtc,
             @Param("endUtc") Instant endUtc
     );

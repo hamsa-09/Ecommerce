@@ -280,7 +280,7 @@ public class BookingServiceImpl implements BookingService {
             if (currentUser.getDepartment() == null) {
                 throw new UnauthorizedException("Department Admin has no department assigned");
             }
-            bookings = bookingRepository.findByUserDepartmentId(currentUser.getDepartment().getId());
+            bookings = bookingRepository.findByResourceDepartmentId(currentUser.getDepartment().getId());
         } else {
             bookings = bookingRepository.findByUserId(currentUser.getId());
         }
@@ -319,7 +319,7 @@ public class BookingServiceImpl implements BookingService {
             if (currentUser.getDepartment() == null) {
                 throw new UnauthorizedException("Department Admin has no department assigned");
             }
-            bookings = bookingRepository.findByDepartmentAndTimeRange(
+            bookings = bookingRepository.findByResourceDepartmentAndTimeRange(
                     currentUser.getDepartment().getId(), start, end);
         } else {
             bookings = bookingRepository.findByUserIdAndTimeRange(currentUser.getId(), start, end);

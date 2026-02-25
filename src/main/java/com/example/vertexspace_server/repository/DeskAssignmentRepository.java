@@ -1,6 +1,7 @@
 package com.example.vertexspace_server.repository;
 
 import com.example.vertexspace_server.model.DeskAssignment;
+import com.example.vertexspace_server.model.Resource;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -32,4 +33,10 @@ public interface DeskAssignmentRepository extends JpaRepository<DeskAssignment, 
             @Param("resourceId") Long resourceId,
             @Param("newStart") Instant newStart
     );
+    @Query("""
+        SELECT DISTINCT d.resource FROM DeskAssignment d
+        WHERE (:deptId IS NULL OR d.resource.department.id = :deptId)
+        AND LOWER(d.resource.type) = 'desk'
+    """)
+    List<Resource> findAssignedDeskResources(@Param("deptId") Long deptId);
 }
