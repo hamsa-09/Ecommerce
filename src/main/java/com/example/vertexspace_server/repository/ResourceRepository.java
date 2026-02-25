@@ -32,4 +32,6 @@ public interface ResourceRepository extends JpaRepository<Resource, Long> {
             @Param("deptId") Long deptId,
             @Param("features") List<String> features
     );
+
+    Resource findByNameIgnoreCase(String name);
 }

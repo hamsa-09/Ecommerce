@@ -57,16 +57,20 @@ public class WaitlistServiceImpl implements WaitlistService {
     @Override
     @Transactional
     public WaitlistEntryDTO joinWaitlist(WaitlistJoinDTO waitlistJoinDTO) {
-        Long resourceId = waitlistJoinDTO.getResourceId();
+        String resourceName = waitlistJoinDTO.getResourceName();
         Instant startUtc = Instant.parse(waitlistJoinDTO.getStartUtc());
         Instant endUtc = Instant.parse(waitlistJoinDTO.getEndUtc());
         UserAccount user = JwtUtil.getCurrentUser();
-        List<Booking> bookingList= bookingRepo.findByResourceIdAndTimeRange(resourceId, startUtc, endUtc);
+
+        Resource resource = resourceRepo.findByNameIgnoreCase(resourceName);
+        if (resource == null) {
+            throw new ResourceNotFoundException("Resource not found with name: " + resourceName);
+        }
+
+        List<Booking> bookingList = bookingRepo.findByResourceIdAndTimeRange(resource.getId(), startUtc, endUtc);
         if(bookingList.isEmpty()){
             throw new ResourceNotFoundException("Booking Not Found for the given resource and time slot");
         }
-        Resource resource = resourceRepo.findById(resourceId)
-                .orElseThrow(() -> new ResourceNotFoundException("Resource not found with id: " + resourceId));
 
         WaitlistEntry entry = new WaitlistEntry();
         entry.setResource(resource);

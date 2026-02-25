@@ -15,6 +15,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.time.*;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -25,6 +27,7 @@ public class BestSlotServiceImpl implements BestSlotService {
 
     private static final ZoneId IST_ZONE = ZoneId.of("Asia/Kolkata");
     private static final int BUFFER_MINUTES = 15;
+    private static final DateTimeFormatter REQUEST_DATE_FORMAT = DateTimeFormatter.ofPattern("dd-MM-yyyy");
 
     private final BookingRepository bookingRepository;
     private final ResourceRepository resourceRepository;
@@ -53,9 +56,10 @@ public class BestSlotServiceImpl implements BestSlotService {
                 .orElseThrow(() ->
                         new ResourceNotFoundException("Resource not found"));
 
-        LocalDate date = LocalDate.parse(istDate);
+        LocalDate date = parseRequestedDate(istDate);
 
-        if (date.isBefore(LocalDate.now(IST_ZONE))) {
+        LocalDate todayIst = LocalDate.now(IST_ZONE);
+        if (date.isBefore(todayIst)) {
             throw new InvalidBookingTimeException("Cannot search slots for past date");
         }
 
@@ -64,6 +68,16 @@ public class BestSlotServiceImpl implements BestSlotService {
 
         Instant utcDayStart = istDayStart.atZone(IST_ZONE).toInstant();
         Instant utcDayEnd = istDayEnd.atZone(IST_ZONE).toInstant();
+
+        // If searching for today, skip past time by starting from now rounded up to next 15 minutes
+        if (date.isEqual(todayIst)) {
+            ZonedDateTime nowIst = Instant.now().atZone(IST_ZONE);
+            LocalDateTime roundedNow = roundUpToNext15(nowIst.toLocalDateTime());
+            if (roundedNow.isAfter(istDayEnd)) {
+                throw new InvalidBookingTimeException("No available slots remain for today");
+            }
+            utcDayStart = roundedNow.atZone(IST_ZONE).toInstant();
+        }
 
         List<Booking> activeBookings =
                 bookingRepository.findActiveBookingsForRange(
@@ -91,7 +105,6 @@ public class BestSlotServiceImpl implements BestSlotService {
 
             if (!conflict) {
                 BestSlotDTO dto = new BestSlotDTO();
-                dto.setResourceId(resourceId);
                 dto.setStartUtc(candidateStart);
                 dto.setEndUtc(candidateEnd);
                 result.add(dto);
@@ -109,4 +122,27 @@ public class BestSlotServiceImpl implements BestSlotService {
 
         return result;
     }
+
+    private LocalDate parseRequestedDate(String istDate) {
+        try {
+            return LocalDate.parse(istDate, REQUEST_DATE_FORMAT);
+        } catch (DateTimeParseException e) {
+            try {
+                return LocalDate.parse(istDate);
+            } catch (DateTimeParseException ignored) {
+                throw new InvalidBookingTimeException("Date must be in dd-MM-yyyy format");
+            }
+        }
+    }
+
+    private LocalDateTime roundUpToNext15(LocalDateTime time) {
+        int minute = time.getMinute();
+        int remainder = minute % 15;
+        if (remainder == 0 && time.getSecond() == 0 && time.getNano() == 0) {
+            return time;
+        }
+        int minutesToAdd = 15 - remainder;
+        return time.withSecond(0).withNano(0).plusMinutes(minutesToAdd);
+    }
 }
+

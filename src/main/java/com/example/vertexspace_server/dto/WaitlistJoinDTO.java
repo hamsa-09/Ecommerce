@@ -1,17 +1,16 @@
 package com.example.vertexspace_server.dto;
 
 public class WaitlistJoinDTO {
-    private Long resourceId;
+    private String resourceName;
     private String startUtc;
     private String endUtc;
 
-
-    public Long getResourceId() {
-        return resourceId;
+    public String getResourceName() {
+        return resourceName;
     }
 
-    public void setResourceId(Long resourceId) {
-        this.resourceId = resourceId;
+    public void setResourceName(String resourceName) {
+        this.resourceName = resourceName;
     }
 
     public String getStartUtc() {

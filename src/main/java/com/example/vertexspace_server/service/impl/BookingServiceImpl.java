@@ -122,7 +122,7 @@ public class BookingServiceImpl implements BookingService {
 
             if (!conflicts.isEmpty()) {
                 throw new BookingConflictException(
-                        "Conflict detected at occurrence " + (i + 1)
+                        "Conflict detected for the booking at occurrence " + (i + 1) + ". Please choose a different time slot."
                 );
             }
 

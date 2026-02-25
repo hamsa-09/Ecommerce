@@ -16,10 +16,10 @@ public class BestSlotController {
         this.bestSlotService = bestSlotService;
     }
 
-    @GetMapping("/search")
-    public List<BestSlotDTO> findBestSlots(@RequestParam Long resourceId,
-                                           @RequestParam String istDate,
-                                           @RequestParam int durationMinutes) {
+    @GetMapping("/{resourceId}/istdate/{istDate}/duration/{durationMinutes}")
+    public List<BestSlotDTO> findBestSlots(@PathVariable Long resourceId,
+                                           @PathVariable String istDate,
+                                           @PathVariable int durationMinutes) {
         return bestSlotService.findBestSlots(resourceId, istDate, durationMinutes);
     }
 }

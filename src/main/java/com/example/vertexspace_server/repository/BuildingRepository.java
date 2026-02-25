@@ -6,4 +6,5 @@ import org.springframework.stereotype.Repository;
 
 
 public interface BuildingRepository extends JpaRepository<Building, Long> {
+    Building findByNameIgnoreCase(String name);
 }

@@ -5,7 +5,6 @@ import java.time.Instant;
 public class BestSlotDTO {
     private Instant startUtc;
     private Instant endUtc;
-    private Long resourceId;
 
     public Instant getStartUtc() {
         return startUtc;
@@ -21,13 +20,5 @@ public class BestSlotDTO {
 
     public void setEndUtc(Instant endUtc) {
         this.endUtc = endUtc;
-    }
-
-    public Long getResourceId() {
-        return resourceId;
-    }
-
-    public void setResourceId(Long resourceId) {
-        this.resourceId = resourceId;
     }
 }
