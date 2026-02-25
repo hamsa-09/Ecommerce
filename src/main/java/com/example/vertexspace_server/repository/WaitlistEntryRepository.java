@@ -52,5 +52,18 @@ public interface WaitlistEntryRepository extends JpaRepository<WaitlistEntry, Lo
 
 
     WaitlistEntry findByUserAndId(UserAccount user, Long id);
-}
 
+    @Query("""
+        SELECT e FROM WaitlistEntry e
+        WHERE e.resource.id = :resourceId
+        AND e.startUtc = :startUtc
+        AND e.endUtc = :endUtc
+        AND NOT EXISTS (
+            SELECT 1 FROM WaitlistOffer o
+            WHERE o.waitlistEntry = e
+            AND (o.status = 'OFFERED' OR o.status = 'EXPIRED')
+        )
+        ORDER BY e.createdAtUtc ASC
+    """)
+    Optional<WaitlistEntry> findFirstEligible(Long resourceId, Instant startUtc, Instant endUtc);
+}

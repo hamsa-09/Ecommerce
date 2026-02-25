@@ -3,6 +3,7 @@ import com.example.vertexspace_server.dto.WaitlistEntryDTO;
 import com.example.vertexspace_server.dto.WaitlistJoinDTO;
 import com.example.vertexspace_server.dto.WaitlistStatusDTO;
 import com.example.vertexspace_server.exception.ResourceNotFoundException;
+import com.example.vertexspace_server.exception.UnauthorizedException;
 import com.example.vertexspace_server.model.*;
 import com.example.vertexspace_server.repository.*;
 import com.example.vertexspace_server.service.NotificationService;
@@ -20,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.*;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -60,6 +62,10 @@ public class WaitlistServiceImpl implements WaitlistService {
         String resourceName = waitlistJoinDTO.getResourceName();
         Instant startUtc = Instant.parse(waitlistJoinDTO.getStartUtc());
         Instant endUtc = Instant.parse(waitlistJoinDTO.getEndUtc());
+        Instant now = Instant.now();
+        if (!startUtc.isAfter(now) || !endUtc.isAfter(startUtc)) {
+            throw new UnauthorizedException("Cannot join waitlist for a past or invalid time slot");
+        }
         UserAccount user = JwtUtil.getCurrentUser();
 
         Resource resource = resourceRepo.findByNameIgnoreCase(resourceName);
@@ -70,6 +76,19 @@ public class WaitlistServiceImpl implements WaitlistService {
         List<Booking> bookingList = bookingRepo.findByResourceIdAndTimeRange(resource.getId(), startUtc, endUtc);
         if(bookingList.isEmpty()){
             throw new ResourceNotFoundException("Booking Not Found for the given resource and time slot");
+        }
+
+        boolean userOwnsBooking = bookingList.stream()
+                .anyMatch(b -> b.getUser() != null && b.getUser().getId().equals(user.getId()));
+        boolean isSystemAdmin = user.getRole() != null && "SYSTEM_ADMIN".equalsIgnoreCase(user.getRole().getName());
+        if (userOwnsBooking && !isSystemAdmin) {
+            throw new UnauthorizedException("Cannot join waitlist for a slot you have already booked");
+        }
+
+        Optional<WaitlistEntry> existing = waitlistEntryRepo.findByUserAndSlot(
+                user.getId(), resource.getId(), startUtc, endUtc);
+        if (existing.isPresent()) {
+            throw new UnauthorizedException("You are already in the waitlist for this slot");
         }
 
         WaitlistEntry entry = new WaitlistEntry();
@@ -103,13 +122,24 @@ public class WaitlistServiceImpl implements WaitlistService {
     // STATUS
     // =========================================================
     @Override
-    public WaitlistStatusDTO getWaitlistStatus(Long resourceId,
+    public WaitlistStatusDTO getWaitlistStatus(String resourceName,
                                                    Instant startUtc,
                                                    Instant endUtc) {
 
+        Instant now = Instant.now();
+        if (startUtc.isBefore(now)) {
+            throw new UnauthorizedException("Cannot check waitlist status for past slots");
+        }
+
         UserAccount user = JwtUtil.getCurrentUser();
 
-        // Find current user's waitlist entry
+        Resource resource = resourceRepo.findByNameIgnoreCase(resourceName);
+        if (resource == null) {
+            throw new ResourceNotFoundException("Resource not found with name: " + resourceName);
+        }
+
+        Long resourceId = resource.getId();
+
         Optional<WaitlistEntry> entryOpt =
                 waitlistEntryRepo.findByUserAndSlot(
                         user.getId(),
@@ -119,7 +149,7 @@ public class WaitlistServiceImpl implements WaitlistService {
                 );
 
         if (entryOpt.isEmpty()) {
-            return null; // Not in waitlist
+            throw new ResourceNotFoundException("You are not in the waitlist for this slot");
         }
 
         WaitlistEntry entry = entryOpt.get();
@@ -128,29 +158,19 @@ public class WaitlistServiceImpl implements WaitlistService {
         List<WaitlistEntry> queue =
                 waitlistEntryRepo.findFIFO(resourceId, startUtc, endUtc);
 
-        int position = 1;
-        for (WaitlistEntry e : queue) {
-            if (e.getId().equals(entry.getId())) break;
-            position++;
-        }
-
         WaitlistStatusDTO dto = toStatusDTO(entry);
-        dto.setQueuePosition(position);
         dto.setOfferStatus("WAITLIST");
 
-        // Check active offer
-        Optional<WaitlistOffer> activeOffer =
-                offerRepo.findActiveOfferForUser(
-                        user.getId(),
-                        resourceId,
-                        startUtc,
-                        endUtc
-                );
-
-        activeOffer.ifPresent(offer -> {
-            dto.setOfferStatus(offer.getStatus().name());
-            dto.setOfferExpiresAt(offer.getExpiresAtUtc());
-        });
+        // Check latest offer (covers OFFERED/EXPIRED/etc.)
+        Optional<WaitlistOffer> latestOffer = offerRepo.findTopByWaitlistEntryIdOrderByIdDesc(entry.getId());
+        if (latestOffer.isPresent()) {
+            OfferStatus status = latestOffer.get().getStatus();
+            if (status == OfferStatus.EXPIRED) {
+                throw new UnauthorizedException("Offer has expired for this waitlist entry");
+            }
+            dto.setOfferStatus(status.name());
+            dto.setOfferExpiresAt(latestOffer.get().getExpiresAtUtc());
+        }
 
         return dto;
     }
@@ -174,13 +194,12 @@ public class WaitlistServiceImpl implements WaitlistService {
 
         if (activeOfferExists) return;
 
-        // Get FIFO waitlist
-        List<WaitlistEntry> queue =
-                waitlistEntryRepo.findFIFO(resourceId, slotStart, slotEnd);
+        Optional<WaitlistEntry> candidateOpt = waitlistEntryRepo.findFirstEligible(resourceId, slotStart, slotEnd);
+        if (candidateOpt.isEmpty()) {
+            return;
+        }
 
-        if (queue.isEmpty()) return;
-
-        WaitlistEntry nextUser = queue.get(0);
+        WaitlistEntry nextUser = candidateOpt.get();
 
         //Create provisional booking (BLOCK SLOT)
         Booking provisional = new Booking();
@@ -213,10 +232,10 @@ public class WaitlistServiceImpl implements WaitlistService {
     // =========================================================
     @Override
     @Transactional
-    public String acceptOffer(Long offerId) {
+    public String acceptOffer(Long waitlistEntryId) {
 
-        WaitlistOffer offer = offerRepo.findByIdForUpdate(offerId)
-                .orElseThrow(() -> new RuntimeException("Offer not found"));
+        WaitlistOffer offer = offerRepo.findByWaitlistEntryIdForUpdate(waitlistEntryId)
+                .orElseThrow(() -> new RuntimeException("Offer not found for waitlist entry"));
 
         if (offer.getStatus() != OfferStatus.OFFERED)
             throw new RuntimeException("Offer not active");
@@ -245,6 +264,7 @@ public class WaitlistServiceImpl implements WaitlistService {
         List<WaitlistOffer> expired =
                 offerRepo.findExpiredOffers(Instant.now());
 
+        logger.info("Found {} expired offers", expired.size());
         for (WaitlistOffer offer : expired) {
 
             offer.setStatus(OfferStatus.EXPIRED);
@@ -253,10 +273,7 @@ public class WaitlistServiceImpl implements WaitlistService {
             // Delete provisional booking
             bookingRepo.delete(offer.getProvisionalBooking());
 
-            // Remove user from waitlist
-            waitlistEntryRepo.delete(offer.getWaitlistEntry());
-
-            // Trigger next FIFO
+            // Trigger next FIFO (will skip expired entries and advance)
             createOfferForWaitlist(
                     offer.getWaitlistEntry().getResource().getId(),
                     offer.getWaitlistEntry().getStartUtc(),

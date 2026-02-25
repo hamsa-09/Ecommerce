@@ -15,7 +15,7 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     @Query("""
         SELECT b FROM Booking b
         WHERE b.resource.id = :resourceId
-        AND b.status = 'CONFIRMED'
+        AND b.status IN ('CONFIRMED','PROVISIONAL')
         AND (b.startUtc < :bufferEnd AND b.endUtc > :startUtc)
     """)
     List<Booking> findConflicts(

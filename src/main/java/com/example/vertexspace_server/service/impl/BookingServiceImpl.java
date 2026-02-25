@@ -148,12 +148,8 @@ public class BookingServiceImpl implements BookingService {
             );
         }
         logger.info("Booking created with recurrence group {}", recurrenceGroupId);
-        BookingResponseDTO response = toDTO(savedBookings.get(0));
-        response.setRecurring(recurring);
-        response.setRecurrenceType(recurrenceType);
-        response.setRecurrenceCount(occurrences);
 
-        return response; // return first occurrence
+        return toDTO(savedBookings.get(0)); // return first occurrence
     }
 
     // =========================================================
@@ -275,6 +271,7 @@ public class BookingServiceImpl implements BookingService {
     public BookingListResponseDTO listBookingsByUser() {
         UserAccount currentUser = JwtUtil.getCurrentUser();
         String roleName = currentUser.getRole().getName();
+        Instant now = Instant.now();
 
         List<Booking> bookings;
         if ("SYSTEM_ADMIN".equalsIgnoreCase(roleName)) {
@@ -287,6 +284,10 @@ public class BookingServiceImpl implements BookingService {
         } else {
             bookings = bookingRepository.findByUserId(currentUser.getId());
         }
+        bookings = bookings.stream()
+                .filter(b -> b.getStatus() != BookingStatus.CANCELLED)
+                .filter(b -> b.getEndUtc().isAfter(now))
+                .toList();
         return splitByCurrentUser(bookings, currentUser.getId());
     }
 
@@ -309,6 +310,7 @@ public class BookingServiceImpl implements BookingService {
         String roleName = currentUser.getRole().getName();
         Instant start = Instant.parse(startUtc);
         Instant end = Instant.parse(endUtc);
+        Instant now = Instant.now();
 
         List<Booking> bookings;
         if ("SYSTEM_ADMIN".equalsIgnoreCase(roleName)) {
@@ -322,6 +324,11 @@ public class BookingServiceImpl implements BookingService {
         } else {
             bookings = bookingRepository.findByUserIdAndTimeRange(currentUser.getId(), start, end);
         }
+
+        bookings = bookings.stream()
+                .filter(b -> b.getStatus() != BookingStatus.CANCELLED)
+                .filter(b -> b.getEndUtc().isAfter(now))
+                .toList();
 
         return splitByCurrentUser(bookings, currentUser.getId());
     }

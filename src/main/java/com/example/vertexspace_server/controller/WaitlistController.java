@@ -29,22 +29,22 @@ public class WaitlistController {
         return ResponseEntity.ok(new SuccessResponse<>("Left waitlist successfully"));
     }
 
-    @GetMapping("/status")
+    @GetMapping("/status/{resourceName}/start/{startUtc}/end/{endUtc}")
     public ResponseEntity<SuccessResponse<WaitlistStatusDTO>> getWaitlistStatus(
-            @RequestParam Long resourceId,
-            @RequestParam String startUtc,
-            @RequestParam String endUtc) {
+            @PathVariable String resourceName,
+            @PathVariable String startUtc,
+            @PathVariable String endUtc) {
 
         return ResponseEntity.ok(
                 new SuccessResponse<>(
-                        waitlistService.getWaitlistStatus(resourceId,Instant.parse(startUtc),Instant.parse( endUtc))
+                        waitlistService.getWaitlistStatus(resourceName,Instant.parse(startUtc),Instant.parse( endUtc))
                 )
         );
     }
 
-    @PostMapping("/offer/accept/{id}")
-    public  ResponseEntity<SuccessResponse<String>> acceptOffer(@PathVariable Long id) {
-        return ResponseEntity.ok(new SuccessResponse<>(waitlistService.acceptOffer(id)));
+    @PatchMapping("/offer/accept/{entryId}")
+    public  ResponseEntity<SuccessResponse<String>> acceptOffer(@PathVariable Long entryId) {
+        return ResponseEntity.ok(new SuccessResponse<>(waitlistService.acceptOffer(entryId)));
     }
 
 }

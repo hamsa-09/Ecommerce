@@ -17,6 +17,10 @@ public interface WaitlistOfferRepository extends JpaRepository<WaitlistOffer, Lo
     @Query("SELECT o FROM WaitlistOffer o WHERE o.id = :id")
     Optional<WaitlistOffer> findByIdForUpdate(Long id);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT o FROM WaitlistOffer o WHERE o.waitlistEntry.id = :entryId")
+    Optional<WaitlistOffer> findByWaitlistEntryIdForUpdate(@Param("entryId") Long entryId);
+
     @Query("""
     SELECT COUNT(o) > 0 FROM WaitlistOffer o
         WHERE o.waitlistEntry.resource.id = :resourceId
@@ -50,5 +54,6 @@ public interface WaitlistOfferRepository extends JpaRepository<WaitlistOffer, Lo
             @Param("startUtc") Instant startUtc,
             @Param("endUtc") Instant endUtc
     );
-}
 
+    Optional<WaitlistOffer> findTopByWaitlistEntryIdOrderByIdDesc(Long id);
+}

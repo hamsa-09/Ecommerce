@@ -11,8 +11,8 @@ import java.util.List;
 public interface WaitlistService {
     WaitlistEntryDTO joinWaitlist(WaitlistJoinDTO waitlistJoinDTO);
     void leaveWaitlist(Long waitlistEntryId);
-    WaitlistStatusDTO getWaitlistStatus(Long resourceId, Instant startUtc, Instant endUtc);
-    String acceptOffer(Long offerId);
+    WaitlistStatusDTO getWaitlistStatus(String resourceName, Instant startUtc, Instant endUtc);
+    String acceptOffer(Long waitlistEntryId);
     void createOfferForWaitlist(Long resourceId, Instant slotStart, Instant slotEnd);
 
 }
