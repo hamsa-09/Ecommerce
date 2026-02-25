@@ -5,9 +5,11 @@ import java.time.Instant;
 public class BookingResponseDTO {
     private Long id;
     private Long resourceId;
+    private String resourceName;
     private Instant startUtc;
     private Instant endUtc;
     private String status;
+    private String recurrenceGroupId;
     private Boolean recurring;
     private String recurrenceType;
     private Integer recurrenceCount;
@@ -26,6 +28,22 @@ public class BookingResponseDTO {
 
     public void setResourceId(Long resourceId) {
         this.resourceId = resourceId;
+    }
+
+    public String getResourceName() {
+        return resourceName;
+    }
+
+    public String getRecurrenceGroupId() {
+        return recurrenceGroupId;
+    }
+
+    public void setRecurrenceGroupId(String recurrenceGroupId) {
+        this.recurrenceGroupId = recurrenceGroupId;
+    }
+
+    public void setResourceName(String resourceName) {
+        this.resourceName = resourceName;
     }
 
     public Instant getStartUtc() {

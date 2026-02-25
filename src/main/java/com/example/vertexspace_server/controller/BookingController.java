@@ -1,5 +1,6 @@
 package com.example.vertexspace_server.controller;
 
+import com.example.vertexspace_server.dto.BookingListResponseDTO;
 import com.example.vertexspace_server.dto.BookingRequestDTO;
 import com.example.vertexspace_server.dto.BookingResponseDTO;
 import com.example.vertexspace_server.dto.SuccessResponse;
@@ -36,7 +37,7 @@ public class BookingController {
 
     @GetMapping("/user")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<SuccessResponse<List<BookingResponseDTO>>> listBookingsByUser() {
+    public ResponseEntity<SuccessResponse<BookingListResponseDTO>> listBookingsByUser() {
         return ResponseEntity.ok(new SuccessResponse<>(bookingService.listBookingsByUser()));
     }
 
@@ -51,7 +52,7 @@ public class BookingController {
 
     @GetMapping("/range")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<SuccessResponse<List<BookingResponseDTO>>> listBookingsByDateRange(
+    public ResponseEntity<SuccessResponse<BookingListResponseDTO>> listBookingsByDateRange(
             @RequestParam String startUtc,
             @RequestParam String endUtc) {
         return ResponseEntity.ok(new SuccessResponse<>(bookingService.listBookingsByDateRange(startUtc, endUtc)));

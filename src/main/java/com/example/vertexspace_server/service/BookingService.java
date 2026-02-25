@@ -1,4 +1,6 @@
 package com.example.vertexspace_server.service;
+
+import com.example.vertexspace_server.dto.BookingListResponseDTO;
 import com.example.vertexspace_server.dto.BookingRequestDTO;
 import com.example.vertexspace_server.dto.BookingResponseDTO;
 import com.example.vertexspace_server.model.Booking;
@@ -9,9 +11,7 @@ public interface BookingService {
     BookingResponseDTO createBooking(BookingRequestDTO bookingRequestDTO);
     String cancelBooking(Long id);
     String cancelSeries(Long bookingId);
-    List<BookingResponseDTO> listBookingsByUser();
+    BookingListResponseDTO listBookingsByUser();
+    BookingListResponseDTO listBookingsByDateRange(String startUtc, String endUtc);
     List<BookingResponseDTO> listBookingsByResource(Long resourceId, String startUtc, String endUtc);
-    List<BookingResponseDTO> listBookingsByDateRange(String startUtc, String endUtc);
-    List<Booking> getAllBookings();
-    void deleteBooking(Long bookingId);
 }

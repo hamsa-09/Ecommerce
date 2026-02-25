@@ -28,6 +28,36 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     @Query("""
         SELECT b FROM Booking b
+        WHERE b.user.department.id = :departmentId
+    """)
+    List<Booking> findByUserDepartmentId(@Param("departmentId") Long departmentId);
+
+    @Query("""
+        SELECT b FROM Booking b
+        WHERE b.user.id = :userId
+        AND b.startUtc >= :startUtc
+        AND b.endUtc <= :endUtc
+    """)
+    List<Booking> findByUserIdAndTimeRange(
+            @Param("userId") Long userId,
+            @Param("startUtc") Instant startUtc,
+            @Param("endUtc") Instant endUtc
+    );
+
+    @Query("""
+        SELECT b FROM Booking b
+        WHERE b.user.department.id = :departmentId
+        AND b.startUtc >= :startUtc
+        AND b.endUtc <= :endUtc
+    """)
+    List<Booking> findByDepartmentAndTimeRange(
+            @Param("departmentId") Long departmentId,
+            @Param("startUtc") Instant startUtc,
+            @Param("endUtc") Instant endUtc
+    );
+
+    @Query("""
+        SELECT b FROM Booking b
         WHERE b.resource.id = :resourceId
         AND b.startUtc >= :startUtc
         AND b.endUtc <= :endUtc

@@ -1,14 +1,17 @@
 package com.example.vertexspace_server.service.impl;
 
+import com.example.vertexspace_server.dto.BookingListResponseDTO;
 import com.example.vertexspace_server.dto.BookingRequestDTO;
 import com.example.vertexspace_server.dto.BookingResponseDTO;
 import com.example.vertexspace_server.events.BookingCancelledEvent;
 import com.example.vertexspace_server.exception.BookingConflictException;
 import com.example.vertexspace_server.exception.InvalidBookingTimeException;
 import com.example.vertexspace_server.exception.ResourceNotFoundException;
+import com.example.vertexspace_server.exception.UnauthorizedException;
 import com.example.vertexspace_server.model.*;
 import com.example.vertexspace_server.repository.BookingRepository;
 import com.example.vertexspace_server.repository.ResourceRepository;
+import com.example.vertexspace_server.repository.WaitlistEntryRepository;
 import com.example.vertexspace_server.service.BookingService;
 import com.example.vertexspace_server.service.NotificationService;
 import com.example.vertexspace_server.service.WaitlistService;
@@ -24,7 +27,9 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -37,16 +42,19 @@ public class BookingServiceImpl implements BookingService {
     private final WaitlistService waitlistService;
     private final ApplicationEventPublisher applicationEventPublisher;
     private final NotificationService notificationService;
+    private final WaitlistEntryRepository waitlistEntryRepository;
     public BookingServiceImpl(
             BookingRepository bookingRepository,
             ResourceRepository resourceRepository,
-            WaitlistService waitlistService, ApplicationEventPublisher applicationEventPublisher, NotificationService notificationService
+            WaitlistService waitlistService, ApplicationEventPublisher applicationEventPublisher, NotificationService notificationService,
+            WaitlistEntryRepository waitlistEntryRepository
     ) {
         this.bookingRepository = bookingRepository;
         this.resourceRepository = resourceRepository;
         this.waitlistService = waitlistService;
         this.applicationEventPublisher = applicationEventPublisher;
         this.notificationService = notificationService;
+        this.waitlistEntryRepository = waitlistEntryRepository;
     }
 
     // =========================================================
@@ -62,7 +70,7 @@ public class BookingServiceImpl implements BookingService {
         if (resource == null) {
             throw new ResourceNotFoundException("Resource not found");
         }
-        //todo if the  is resource desktype , assigned status should not allow to book
+
         if(resource.getType().equalsIgnoreCase("DESK") && resource.getDeskMode().name().equalsIgnoreCase("ASSIGNED") ){
             throw new InvalidBookingTimeException("Cannot book a desk that is in Assigned mode");
         }
@@ -155,13 +163,22 @@ public class BookingServiceImpl implements BookingService {
     @Transactional
     public String cancelBooking(Long id) {
 
-        Long userId = JwtUtil.getCurrentUser().getId();
+        UserAccount currentUser = JwtUtil.getCurrentUser();
+        String roleName = currentUser.getRole().getName();
+        Long userId = currentUser.getId();
 
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
 
-        if (!booking.getUser().getId().equals(userId)) {
-            throw new RuntimeException("You cannot cancel this booking");
+        boolean isOwner = booking.getUser().getId().equals(userId);
+        boolean isSystemAdmin = "SYSTEM_ADMIN".equalsIgnoreCase(roleName);
+        boolean isDeptAdmin = "DEPARTMENT_ADMIN".equalsIgnoreCase(roleName);
+        boolean sameDepartment = booking.getResource().getDepartment() != null &&
+                currentUser.getDepartment() != null &&
+                booking.getResource().getDepartment().getId().equals(currentUser.getDepartment().getId());
+
+        if (!(isOwner || isSystemAdmin || (isDeptAdmin && sameDepartment))) {
+            throw new UnauthorizedException("You cannot cancel this booking");
         }
 
         if ("CANCELLED".equals(booking.getStatus().name())) {
@@ -175,17 +192,21 @@ public class BookingServiceImpl implements BookingService {
         booking.setStatus(BookingStatus.CANCELLED);
         Booking saved = bookingRepository.save(booking);
 
-        logger.info("Booking {} cancelled by user {}", id, userId);
+        logger.info("Booking {} cancelled by user {}", id, currentUser.getUsername());
 
+        boolean hasWaitlistEntries = !waitlistEntryRepository
+                .findByResourceIdAndSlot(resource.getId(), saved.getStartUtc(), saved.getEndUtc())
+                .isEmpty();
 
-        // Publish async domain event
-        applicationEventPublisher.publishEvent(
-                new BookingCancelledEvent(
-                        resource.getId(),
-                        saved.getStartUtc(),
-                        saved.getEndUtc()
-                )
-        );
+        if (hasWaitlistEntries) {
+            applicationEventPublisher.publishEvent(
+                    new BookingCancelledEvent(
+                            resource.getId(),
+                            saved.getStartUtc(),
+                            saved.getEndUtc()
+                    )
+            );
+        }
         notificationService.sendNotification(
                 booking.getUser(),
                 "Your booking has been cancelled.",
@@ -200,8 +221,23 @@ public class BookingServiceImpl implements BookingService {
     @Transactional
     public String cancelSeries(Long bookingId) {
 
+        UserAccount currentUser = JwtUtil.getCurrentUser();
+        String roleName = currentUser.getRole().getName();
+        Long userId = currentUser.getId();
+
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
+
+        boolean isOwner = booking.getUser().getId().equals(userId);
+        boolean isSystemAdmin = "SYSTEM_ADMIN".equalsIgnoreCase(roleName);
+        boolean isDeptAdmin = "DEPARTMENT_ADMIN".equalsIgnoreCase(roleName);
+        boolean sameDepartment = booking.getResource().getDepartment() != null &&
+                currentUser.getDepartment() != null &&
+                booking.getResource().getDepartment().getId().equals(currentUser.getDepartment().getId());
+
+        if (!(isOwner || isSystemAdmin || (isDeptAdmin && sameDepartment))) {
+            throw new UnauthorizedException("You cannot cancel this booking");
+        }
 
         if (booking.getRecurrenceGroupId() == null) {
             return cancelBooking(bookingId);
@@ -218,16 +254,40 @@ public class BookingServiceImpl implements BookingService {
 
         bookingRepository.saveAll(series);
 
+        Set<Long> notified = new HashSet<>();
+        for (Booking b : series) {
+            Long targetUserId = b.getUser().getId();
+            if (notified.add(targetUserId)) {
+                notificationService.sendNotification(
+                        b.getUser(),
+                        "Your booking has been cancelled.",
+                        NotificationType.BOOKING_CANCELLED
+                );
+            }
+        }
+
         return "Entire series cancelled";
     }
     // =========================================================
     // LIST METHODS
     // =========================================================
     @Override
-    public List<BookingResponseDTO> listBookingsByUser() {
-        Long userId = JwtUtil.getCurrentUser().getId();
-        return bookingRepository.findByUserId(userId)
-                .stream().map(this::toDTO).toList();
+    public BookingListResponseDTO listBookingsByUser() {
+        UserAccount currentUser = JwtUtil.getCurrentUser();
+        String roleName = currentUser.getRole().getName();
+
+        List<Booking> bookings;
+        if ("SYSTEM_ADMIN".equalsIgnoreCase(roleName)) {
+            bookings = bookingRepository.findAll();
+        } else if ("DEPARTMENT_ADMIN".equalsIgnoreCase(roleName)) {
+            if (currentUser.getDepartment() == null) {
+                throw new UnauthorizedException("Department Admin has no department assigned");
+            }
+            bookings = bookingRepository.findByUserDepartmentId(currentUser.getDepartment().getId());
+        } else {
+            bookings = bookingRepository.findByUserId(currentUser.getId());
+        }
+        return splitByCurrentUser(bookings, currentUser.getId());
     }
 
     @Override
@@ -242,36 +302,49 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
-    public List<BookingResponseDTO> listBookingsByDateRange(
+    public BookingListResponseDTO listBookingsByDateRange(
             String startUtc, String endUtc) {
 
-        return bookingRepository.findByTimeRange(
-                Instant.parse(startUtc),
-                Instant.parse(endUtc)
-        ).stream().map(this::toDTO).toList();
+        UserAccount currentUser = JwtUtil.getCurrentUser();
+        String roleName = currentUser.getRole().getName();
+        Instant start = Instant.parse(startUtc);
+        Instant end = Instant.parse(endUtc);
+
+        List<Booking> bookings;
+        if ("SYSTEM_ADMIN".equalsIgnoreCase(roleName)) {
+            bookings = bookingRepository.findByTimeRange(start, end);
+        } else if ("DEPARTMENT_ADMIN".equalsIgnoreCase(roleName)) {
+            if (currentUser.getDepartment() == null) {
+                throw new UnauthorizedException("Department Admin has no department assigned");
+            }
+            bookings = bookingRepository.findByDepartmentAndTimeRange(
+                    currentUser.getDepartment().getId(), start, end);
+        } else {
+            bookings = bookingRepository.findByUserIdAndTimeRange(currentUser.getId(), start, end);
+        }
+
+        return splitByCurrentUser(bookings, currentUser.getId());
     }
 
-    @Override
-    public List<Booking> getAllBookings() {
-        return bookingRepository.findAll();
+    private BookingListResponseDTO splitByCurrentUser(List<Booking> bookings, Long currentUserId) {
+        BookingListResponseDTO response = new BookingListResponseDTO();
+        List<BookingResponseDTO> mine = bookings.stream()
+                .filter(b -> b.getUser().getId().equals(currentUserId))
+                .map(this::toDTO)
+                .toList();
+        List<BookingResponseDTO> others = bookings.stream()
+                .filter(b -> !b.getUser().getId().equals(currentUserId))
+                .map(this::toDTO)
+                .toList();
+        response.setCurrentUserBookings(mine);
+        response.setOtherUserBookings(others);
+        return response;
     }
 
-    @Override
-    @Transactional
-    public void deleteBooking(Long bookingId) {
-        bookingRepository.deleteById(bookingId);
-        logger.info("Deleted booking {} via batch cleanup", bookingId);
-    }
-
-    // =========================================================
-    // UTILITY METHODS
-    // =========================================================
     private Instant calculateOccurrenceStart(BookingRequestDTO dto, int index) {
-
         if (!Boolean.TRUE.equals(dto.getRecurring())) {
             return dto.getStartUtc();
         }
-
         return switch (dto.getRecurrenceType()) {
             case "DAILY" -> dto.getStartUtc().plusSeconds(86400L * index);
             case "WEEKLY" -> dto.getStartUtc().plusSeconds(86400L * 7 * index);
@@ -280,17 +353,16 @@ public class BookingServiceImpl implements BookingService {
     }
 
     private Instant calculateOccurrenceEnd(BookingRequestDTO dto, int index) {
-
         if (!Boolean.TRUE.equals(dto.getRecurring())) {
             return dto.getEndUtc();
         }
-
         return switch (dto.getRecurrenceType()) {
             case "DAILY" -> dto.getEndUtc().plusSeconds(86400L * index);
             case "WEEKLY" -> dto.getEndUtc().plusSeconds(86400L * 7 * index);
             default -> throw new RuntimeException("Unsupported recurrence type");
         };
     }
+
     private boolean isAlignedTo15MinGrid(Instant instant) {
         ZoneId ist = ZoneId.of("Asia/Kolkata");
         ZonedDateTime istTime = instant.atZone(ist);
@@ -301,6 +373,8 @@ public class BookingServiceImpl implements BookingService {
         BookingResponseDTO dto = new BookingResponseDTO();
         dto.setId(booking.getId());
         dto.setResourceId(booking.getResource().getId());
+        dto.setResourceName(booking.getResource().getName());
+        dto.setRecurrenceGroupId(booking.getRecurrenceGroupId() != null ? booking.getRecurrenceGroupId().toString() : null);
         dto.setStartUtc(booking.getStartUtc());
         dto.setEndUtc(booking.getEndUtc());
         dto.setStatus(booking.getStatus().name());
